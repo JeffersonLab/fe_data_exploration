@@ -4,7 +4,7 @@ import matplotlib.dates as mdates
 import matplotlib.axes
 
 
-def strip_plot(df, title, x='variable', y='value', alpha=0.25, show=True, palette='colorblind', ylim=(-0.5, 22),
+def strip_plot(df, title, x='variable', y='value', alpha=0.25, show=False, palette='colorblind', ylim=(-0.5, 22),
                **kwargs) -> matplotlib.axes.Axes:
     """Create a strip plot.  Generally useful for numerical distributions split on categorical data.
 
@@ -34,7 +34,7 @@ def strip_plot(df, title, x='variable', y='value', alpha=0.25, show=True, palett
 
 
 def timeline_facetgrid(df, x='Datetime', y='value', row="Date", col='variable', sharey=True, sharex='row',
-                       margin_titles=True, show=True, **kwargs):
+                       margin_titles=True, show=False, **kwargs):
     g = sns.FacetGrid(data=df, row=row, col=col, sharey=sharey, sharex=sharex, margin_titles=margin_titles, **kwargs)
     g.map(sns.lineplot, x, y)
     g.set_titles(row_template='{row_name}', col_template='{col_name}')
