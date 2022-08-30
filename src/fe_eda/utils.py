@@ -4,7 +4,9 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from plots import plot_correlations, strip_plot, timeline_facetgrid
+from config import cfg
 
+#TODO: Define columns on which to do trimming
 
 def load_csv(file: str, det_ub=2000, det_lb=-1, post_trim=0.95) -> pd.DataFrame:
     df = pd.read_csv(file, na_values="<undefined>")
@@ -22,6 +24,7 @@ def load_csv(file: str, det_ub=2000, det_lb=-1, post_trim=0.95) -> pd.DataFrame:
     # values are in [0, 500], with outliers at 1e16.  Cutoff at [-1, 2000] seems safe.
     orig_len = len(df)
     df_trimmed = df[~((df[det_cols] < det_lb) | (df[det_cols] > det_ub)).any(axis=1)]
+    print(df[((df[det_cols] < det_lb) | (df[det_cols] > det_ub)).any(axis=1)].describe())
     trimmed_len = len(df_trimmed)
 
     if (trimmed_len / orig_len) < post_trim:
@@ -82,7 +85,8 @@ def summarize_correlations(gmes_df, gamma_df, neutron_df, detector_df, date_cols
     plot_correlations(neutron_gmes_corr, title="Neutron Radiation (rem/hr) correlated with Cavity GMES (MV/m)")
 
 
-def summarize_gmes(df, id_cols, split_dates=True):
+def summarize_gmes(df: pd.DataFrame, id_cols: List[str], split_dates: bool = False,
+                   filename: str = "summarize_gmes.png"):
     """Summarize a DataFrame containing only 'ID' and GMES columns.  Assumes a category column named 'Date' exists."""
 
     df_melt = df.melt(id_vars=id_cols)
@@ -99,11 +103,20 @@ def summarize_gmes(df, id_cols, split_dates=True):
     # Make a plot for each data set
     for tmp_df in data_sets:
         # Add a strip plot of individual samples.
-        strip_plot(tmp_df, title="Observed Cavity GMES MV/m", zorder=1)
+        g = strip_plot(tmp_df, title="Observed Cavity GMES MV/m", zorder=1)
+        # Font size on the x-tick labels are usually way to big given how many cavities are in a linac
+        xticklabels = [tick.get_text() for tick in plt.xticks()[1]]
+        g.set_xticklabels(xticklabels, size=7)
+
+    # Either show the plot or save it to disk
+    if cfg['show_plots']:
         plt.show()
+    elif filename is not None:
+        plt.savefig(f"{cfg['out_dir']}/{filename}")
 
 
-def summarize_detector(df, id_cols, title, timeline_plots=False):
+
+def summarize_detector(df: pd.DataFrame, id_cols: List[str], title: str, timeline_plots: bool = False, filename: str = None):
     # Put this into a more seaborn friendly format
     print(df.shape)
     print(df.columns)
@@ -113,9 +126,20 @@ def summarize_detector(df, id_cols, title, timeline_plots=False):
     # Plot out the gamma radiation ranges
     strip_plot(df_melt, title=title, s=2, ylim=None)
 
+    # Either show the plot or save it to disk
+    if cfg['show_plots']:
+        plt.show()
+    elif filename is not None:
+        plt.savefig(f"{cfg['out_dir']}/{filename}")
+
     # Gamma radiation over time
     if timeline_plots:
         timeline_facetgrid(df_melt, hue='variable')
+        # Either show the plot or save it to disk
+        if cfg['show_plots']:
+            plt.show()
+        elif filename is not None:
+            plt.savefig(f"{cfg['out_dir']}/{filename}-timeline.png")
 
 
 def get_cols(df: pd.DataFrame, rad_suffix="") -> Tuple[List[str], List[str], List[str], List[str]]:
