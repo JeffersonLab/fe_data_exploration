@@ -24,12 +24,16 @@ def load_csv(file: str, det_ub=2000, det_lb=-1, post_trim=0.95) -> pd.DataFrame:
     # values are in [0, 500], with outliers at 1e16.  Cutoff at [-1, 2000] seems safe.
     orig_len = len(df)
     df_trimmed = df[~((df[det_cols] < det_lb) | (df[det_cols] > det_ub)).any(axis=1)]
-    print(df[((df[det_cols] < det_lb) | (df[det_cols] > det_ub)).any(axis=1)].describe())
     trimmed_len = len(df_trimmed)
 
     if (trimmed_len / orig_len) < post_trim:
         raise RuntimeError(f"Trimming EXTREME detector outliers kept less than {post_trim*100}% of values.  Orig = {orig_len}. "
                            f"Trimmed = {trimmed_len}")
+
+    print("\n\n##### Data prior to trimming ########\n\n")
+    print(df.describe())
+    print("\n\n##### Data after trimming #######\n\n")
+    print(df_trimmed.describe())
 
     return df_trimmed
 
@@ -101,7 +105,9 @@ def summarize_gmes(df: pd.DataFrame, id_cols: List[str], split_dates: bool = Fal
 
     print("About to start plotting")
     # Make a plot for each data set
-    for tmp_df in data_sets:
+    for idx, tmp_df in enumerate(data_sets):
+        print(f"Plotting data set {idx} of {len(data_sets)}")
+        print(tmp_df.describe())
         # Add a strip plot of individual samples.
         g = strip_plot(tmp_df, title="Observed Cavity GMES MV/m", zorder=1)
         # Font size on the x-tick labels are usually way to big given how many cavities are in a linac
@@ -118,9 +124,10 @@ def summarize_gmes(df: pd.DataFrame, id_cols: List[str], split_dates: bool = Fal
 
 def summarize_detector(df: pd.DataFrame, id_cols: List[str], title: str, timeline_plots: bool = False, filename: str = None):
     # Put this into a more seaborn friendly format
-    print(df.shape)
-    print(df.columns)
-    print(id_cols)
+    print(f"Plotting {title}")
+    print(f"id_cols: {id_cols}")
+    print(df.describe())
+
     df_melt = df.melt(id_vars=id_cols)
 
     # Plot out the gamma radiation ranges
