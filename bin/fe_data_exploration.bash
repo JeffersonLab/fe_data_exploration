@@ -7,7 +7,7 @@ DIR="$( cd "$( dirname "$(readlink -f "${BASH_SOURCE[0]}")" )" >/dev/null 2>&1 &
 source ${DIR}/../venv/bin/activate
 
 # Run the app passing along all of the args
-python3 ${DIR}/../src/main.py "$@"
+python3 ${DIR}/../src/fe_eda/main.py "$@"
 
 # Unload the virtual environment
 deactivate
