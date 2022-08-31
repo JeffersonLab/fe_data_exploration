@@ -131,7 +131,7 @@ def do_pca(file: str, rf_daq_zones: List[str]) -> None:
     if cfg['show_plots']:
         plt.show()
     else:
-        plt.savefig("pca-gmes-point-wise-dimensionality.png")
+        plt.savefig(f"{cfg['out_dir']}/pca-gmes-point-wise-dimensionality.png")
 
     pca = PCA()
     pca.fit(gmes_df[gmes_study_cols])
