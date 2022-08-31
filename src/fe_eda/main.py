@@ -139,7 +139,6 @@ def do_pca(file: str, rf_daq_zones: List[str]) -> None:
     print(pca.explained_variance_ratio_)
 
     gmes_pc = pca.transform(gmes_df[gmes_study_cols])
-    # plt.figure(figsize=(10, 10))
     frac = 0.1
     g = sns.pairplot(pd.DataFrame(gmes_pc[:, 0:10]).sample(frac=frac))
     g.fig.suptitle(f"Pair Plots of first 10 Principal Components ({np.round(frac*100, 2)}% Sampled)")
