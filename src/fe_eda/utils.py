@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import pandas as pd
 import seaborn as sns
@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 from plots import plot_correlations, strip_plot, timeline_facetgrid
 from config import cfg
 
-#TODO: Define columns on which to do trimming
+
+# TODO: Define columns on which to do trimming
 
 def load_csv(file: str, det_ub=2000, det_lb=-1, post_trim=0.95) -> pd.DataFrame:
     df = pd.read_csv(file, na_values="<undefined>")
@@ -27,8 +28,9 @@ def load_csv(file: str, det_ub=2000, det_lb=-1, post_trim=0.95) -> pd.DataFrame:
     trimmed_len = len(df_trimmed)
 
     if (trimmed_len / orig_len) < post_trim:
-        raise RuntimeError(f"Trimming EXTREME detector outliers kept less than {post_trim*100}% of values.  Orig = {orig_len}. "
-                           f"Trimmed = {trimmed_len}")
+        raise RuntimeError(
+            f"Trimming EXTREME detector outliers kept less than {post_trim * 100}% of values.  Orig = {orig_len}. "
+            f"Trimmed = {trimmed_len}")
 
     print("\n\n##### Data prior to trimming ########\n\n")
     print(df.describe())
@@ -65,21 +67,50 @@ def trim_dataframe_outliers(df, lbq=0.001, ubq=0.999):
     return df[~((df < lb) | (df > ub)).any(axis=1)]
 
 
-def summarize_correlations(gmes_df, gamma_df, neutron_df, detector_df, date_cols, pair_plots=False):
+def make_pair_plot(df: pd.DataFrame, title: str, filename: str = None):
+    print(df.head())
+    print(df.describe())
+    g = sns.pairplot(df, plot_kws={'line_kws': {'color': 'red'}, 'scatter_kws': {'s': 2, 'alpha': 0.5}}, kind='reg')
+    g.fig.suptitle(title)
+
+    # Either show the plot or save it to disk
+    if cfg['show_plots']:
+        print("HERE")
+        plt.show()
+    elif filename is not None:
+        plt.savefig(f"{cfg['out_dir']}/{filename}")
+
+    return g
+
+
+def summarize_correlations(gmes_df: pd.DataFrame, gamma_df: pd.DataFrame, neutron_df: pd.DataFrame,
+                           detector_df: pd.DataFrame, date_cols: List[str], filename: str = "corr") -> None:
+    """Presents a summary of correlations between data.
+
+    Plots are either saved to disk or drawn to screen depending on cfg['show_plots']
+
+    Args:
+        gmes_df: A DataFrame containing GMES data to be correlated
+        gamma_df: A DataFrame containing Gamma data to be correlated
+        neutron_df: A DataFrame containing Neutron data to be correlated
+        detector_df: A DataFrame of detector data (both Gamma and Neutron) to be correlated.
+        date_cols: A list of date columns contained in the supplied DataFrames
+        filename: The base filename used to create these files
+
+    """
     gamma_gmes_corr = get_cartesian_correlations(gmes_df.drop(columns=date_cols), gamma_df.drop(columns=date_cols))
     neutron_gmes_corr = get_cartesian_correlations(gmes_df.drop(columns=date_cols), neutron_df.drop(columns=date_cols))
     detector_corr = detector_df.corr()
+    gmes_corr = gmes_df.corr()
 
-    # Plot correlation between gamma and neutron response
-    if pair_plots:
-        g = sns.pairplot(detector_df,
-                         plot_kws={
-                             'line_kws': {'color': 'red'},
-                             'scatter_kws': {'s': 2, 'alpha': 0.5}}
-                         , kind='reg')
-
-        g.fig.suptitle("Gamma vs. Neutron Dose Rate (rem/hr)")
-        plt.show()
+    print("\n\n######### Gamma vs GMES Correlations ########")
+    print(gamma_gmes_corr)
+    print("\n\n######### Neutron vs GMES Correlations ########")
+    print(neutron_gmes_corr)
+    print("\n\n######### Radiation Correlations ########")
+    print(detector_corr)
+    print("\n\n######### Radiation Correlations ########")
+    print(gmes_corr)
 
     plot_correlations(detector_corr, figsize=(10, 10), spa_kws={'left': 0.2, 'right': 1, 'bottom': 0.2},
                       title="Gamma and Neutron Dose Rate (rem/hr) Correlation")
@@ -90,7 +121,7 @@ def summarize_correlations(gmes_df, gamma_df, neutron_df, detector_df, date_cols
 
 
 def summarize_gmes(df: pd.DataFrame, id_cols: List[str], split_dates: bool = False,
-                   filename: str = "summarize_gmes.png"):
+                   filename: str = "summarize_gmes"):
     """Summarize a DataFrame containing only 'ID' and GMES columns.  Assumes a category column named 'Date' exists."""
 
     df_melt = df.melt(id_vars=id_cols)
@@ -121,8 +152,8 @@ def summarize_gmes(df: pd.DataFrame, id_cols: List[str], split_dates: bool = Fal
         plt.savefig(f"{cfg['out_dir']}/{filename}")
 
 
-
-def summarize_detector(df: pd.DataFrame, id_cols: List[str], title: str, timeline_plots: bool = False, filename: str = None):
+def summarize_detector(df: pd.DataFrame, id_cols: List[str], title: str, timeline_plots: bool = False,
+                       filename: str = None):
     # Put this into a more seaborn friendly format
     print(f"Plotting {title}")
     print(f"id_cols: {id_cols}")
@@ -168,3 +199,33 @@ def get_data_subsets(df: pd.DataFrame, gmes_cols: List[str], gamma_cols: List[st
     return gmes_df, gamma_df, neutron_df, detector_df
 
 
+def get_columns_startswith(df: pd.DataFrame, patterns: List[str]):
+    """Returns a list of column names from the given DataFrame that start with at least one of the given patterns."""
+    cols = df.columns
+    out = []
+    for pattern in patterns:
+        out += cols[cols.str.startswith(pattern)].to_list()
+
+    # Remove duplicates and return the column names
+    return sorted(list(set(out)))
+
+
+def plot_timeline(df: pd.DataFrame, col_startswith: Optional[List[str]] = None, filename: str = None,
+                  subplots_adjust_kw: Optional[dict] = None, **kwargs) -> None:
+    if col_startswith is None:
+        df.set_index('Datetime').drop(columns=['Date']).plot(linestyle='--', marker='o', **kwargs)
+
+    else:
+        fig, axs = plt.subplots(nrows=len(col_startswith), ncols=1, figsize=(25, 2 + 4 * len(col_startswith)),
+                                sharex=True, sharey=True)
+        for idx, pattern in enumerate(col_startswith):
+            ax = axs[idx]
+            cols = get_columns_startswith(df, [pattern])
+            df.set_index('Datetime').drop(columns=['Date'])[cols].plot(ax=ax, linestyle='--', marker='o',
+                                                                       title=pattern, **kwargs)
+
+    plt.subplots_adjust(**subplots_adjust_kw)
+    if cfg['show_plots']:
+        plt.show()
+    elif filename is not None:
+        plt.savefig(f"{cfg['out_dir']}/{filename}")
