@@ -1,7 +1,12 @@
+from typing import Optional
+
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.dates as mdates
 import matplotlib.axes
+
+from config import cfg
 
 
 def strip_plot(df, title, x='variable', y='value', alpha=0.25, show=False, palette='colorblind', ylim=(-0.5, 22),
@@ -49,15 +54,12 @@ def timeline_facetgrid(df, x='Datetime', y='value', row="Date", col='variable', 
     return g
 
 
-def plot_correlations(corr_df, figsize=(60, 10), cmap=sns.diverging_palette(220, 20, as_cmap=True), title="",
-                      corr_decimals=1, show=True, spa_kws=None):
+def plot_correlations(corr_df: pd.DataFrame, cmap=sns.diverging_palette(220, 20, as_cmap=True), title: str = "",
+                      corr_decimals: int = 1, spa_kws: Optional[dict] = None, filename: str = None):
     """Plot a heatmap for correlation data.  Intended for large, asymmetric matrices (10x200)."""
 
     if spa_kws is None:
         spa_kws = {'left': 0.04, 'right': 1.15}
-
-    # Generate figure.
-    plt.figure(figsize=figsize)
 
     # Supply corr values to a single decimal place as annotation labels
     labels = corr_df.applymap(lambda v: round(v, corr_decimals))
@@ -68,13 +70,18 @@ def plot_correlations(corr_df, figsize=(60, 10), cmap=sns.diverging_palette(220,
                     annot_kws={'fontsize': 10},  # Cell label size
                     cmap=cmap,  # Color map used for color bar/cells
                     cbar_kws={'pad': 0.01},  # Padding between color bar and plot in fraction of plot axes
-                    linewidth=0.01  # Thickness of lines between cells
+                    linewidth=0.01,  # Thickness of lines between cells
+                    vmin=-1,  # The minimum value in data, controls color bar
+                    vmax=1  # The maximum value in data, controls color bar
                     )
     g.set_title(title)
     plt.subplots_adjust(**spa_kws)
 
-    if show:
+    # Either show the plot or save it to disk
+    if cfg['show_plots']:
         plt.show()
+    elif filename is not None:
+        g.get_figure().savefig(f"{cfg['out_dir']}/{filename}")
 
     return g
 
