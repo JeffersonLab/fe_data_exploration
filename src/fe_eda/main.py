@@ -26,19 +26,20 @@ def main():
                         help="The input data file to do EDA on.  Recommend it to be in data/")
     parser.add_argument('-p', '--show-plots', default=False, action='store_true',
                         help="Displays plots and output instead of saving the to disk.")
-    parser.add_argument('-o', '--operation', type=str, choices=['summary', 'pca'], required=True,
-                        help='What type of EDA to perform.  "summary" creates a collection of distribution plots and'
-                             'reports')
     parser.add_argument('-z', '--rf-zones', type=str, nargs='+', default=['R1M', 'R1N', 'R1O', 'R1P'],
                         help="The EPICSNames for the zones that were being controlled in this data, e.g., R1M")
+    subparsers = parser.add_subparsers(dest='command')
+    summary = subparsers.add_parser("summary", help="Generate a basic summary of the data collected, including "
+                                                    "distributions and corrleations")
+    pca = subparsers.add_parser("pca", help="Do PCA-based analysis for intrinsic dimensionality and input structure")
 
     args = parser.parse_args()
     cfg['file'] = args.file
-    cfg['operation'] = args.operation
+    cfg['operation'] = args.command
     cfg['show_plots'] = args.show_plots
     cfg['rf_zones'] = args.rf_zones
 
-    out_dir = f"out/{os.path.basename(args.file)}-{args.operation}-{datetime.now().strftime('%Y-%m-%d_%H%M%S')}"
+    out_dir = f"out/{os.path.basename(args.file)}-{cfg['operation']}-{datetime.now().strftime('%Y-%m-%d_%H%M%S')}"
     if cfg['show_plots']:
         out_dir = None
     cfg['out_dir'] = out_dir
@@ -141,7 +142,7 @@ def do_pca(file: str, rf_daq_zones: List[str]) -> None:
     gmes_pc = pca.transform(gmes_df[gmes_study_cols])
     frac = 0.1
     g = sns.pairplot(pd.DataFrame(gmes_pc[:, 0:10]).sample(frac=frac))
-    g.fig.suptitle(f"Pair Plots of first 10 Principal Components ({np.round(frac*100, 2)}% Sampled)")
+    g.fig.suptitle(f"Pair Plots of first 10 Principal Components ({np.round(frac * 100, 2)}% Sampled)")
 
     if cfg['show_plots']:
         plt.show()
@@ -153,7 +154,8 @@ def do_summary(file: str, rf_daq_zones: List[str]) -> None:
     print("\n\n##########################")
     print("Loading data")
     print("##########################")
-    df = utils.load_csv(file, det_lb=-math.inf, det_ub=math.inf)
+    # df = utils.load_csv(file, det_lb=-math.inf, det_ub=math.inf)
+    df = utils.load_csv(file)
 
     # Get data in useful subsets
     print("\n\n##########################")
