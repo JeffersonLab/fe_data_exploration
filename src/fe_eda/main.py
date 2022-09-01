@@ -30,7 +30,7 @@ def main():
                         help="The EPICSNames for the zones that were being controlled in this data, e.g., R1M")
     subparsers = parser.add_subparsers(dest='command')
     summary = subparsers.add_parser("summary", help="Generate a basic summary of the data collected, including "
-                                                    "distributions and corrleations")
+                                                    "distributions and correlations")
     pca = subparsers.add_parser("pca", help="Do PCA-based analysis for intrinsic dimensionality and input structure")
 
     args = parser.parse_args()
