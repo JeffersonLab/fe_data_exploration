@@ -1,5 +1,5 @@
 from typing import List, Tuple, Optional
-
+import warnings
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -28,9 +28,10 @@ def load_csv(file: str, det_ub=2000, det_lb=-1, post_trim=0.95) -> pd.DataFrame:
     trimmed_len = len(df_trimmed)
 
     if (trimmed_len / orig_len) < post_trim:
-        raise RuntimeError(
-            f"Trimming EXTREME detector outliers kept less than {post_trim * 100}% of values.  Orig = {orig_len}. "
-            f"Trimmed = {trimmed_len}")
+        msg = f"Trimming EXTREME detector outliers kept less than {post_trim * 100}% of values.  Orig = {orig_len}. "
+              f"Trimmed = {trimmed_len}"
+        warnings.warn(msg)
+        print(msg)
 
     print("\n\n##### Data prior to trimming ########\n\n")
     print(df.describe())
